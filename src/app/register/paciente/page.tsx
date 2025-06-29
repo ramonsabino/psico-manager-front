@@ -12,6 +12,7 @@ export default function PacientePage() {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState<Date | null>(null);
   const [senha, setSenha] = useState("");
 
@@ -49,7 +50,7 @@ export default function PacientePage() {
     );
   };
 
-   const getSenhaRequisitos = (senha: string) => {
+  const getSenhaRequisitos = (senha: string) => {
     const requisitos: string[] = [];
 
     if (senha.length < 8) requisitos.push("mínimo 8 caracteres");
@@ -75,23 +76,21 @@ export default function PacientePage() {
     }
   }, [cpf]);
 
-  const handleCadastro = (e: React.FormEvent) => {
+   const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
     if (!validateEmail(email)) {
-      newErrors.email =
-        "Email inválido. Deve conter um domínio válido, ex: usuario@dominio.com";
+      newErrors.email = "Email inválido. Ex: usuario@dominio.com";
     }
 
     if (!validateSenha(senha)) {
       newErrors.senha =
-        "Senha deve conter no mínimo 8 caracteres, incluindo 1 letra maiúscula, 1 número e 1 símbolo.";
+        "Senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 número e 1 símbolo.";
     }
 
     if (!validateDataNascimento(dataNascimento)) {
-      newErrors.dataNascimento =
-        "Data de nascimento não pode ser igual à data atual.";
+      newErrors.dataNascimento = "Data de nascimento não pode ser hoje.";
     }
 
     if (!validarCPF(cpf)) {
@@ -103,14 +102,37 @@ export default function PacientePage() {
       return;
     }
 
-    setErrors({});
-    console.log({
+    const payload = {
       nome,
       cpf,
       email,
-      dataNascimento,
+      telefone,
       senha,
-    });
+      dataNascimento: dataNascimento?.toISOString().split("T")[0],
+    };
+    console.log(payload, "Estou aqui");
+    try {
+      const response = await fetch("http://localhost:8080/api/pacientes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Erro ao cadastrar:", errorData);
+        alert("Erro ao cadastrar paciente. Verifique os dados.");
+        return;
+      }
+
+      alert("Cadastro realizado com sucesso!");
+      router.push("/login");
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+      alert("Erro na comunicação com o servidor.");
+    }
   };
 
   const handleRedirect = (type: "paciente" | "profissional") => {
@@ -198,6 +220,23 @@ export default function PacientePage() {
 
           <div>
             <label
+              htmlFor="telefone"
+              className="block text-gray-700 font-medium mb-1"
+            >
+              Telefone
+            </label>
+            <input
+              id="telefone"
+              type="text"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              className="w-full border text-black border-black rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label
               htmlFor="dataNascimento"
               className="block text-gray-700 font-medium mb-1"
             >
@@ -234,7 +273,7 @@ export default function PacientePage() {
             )}
           </div>
 
-           <div>
+          <div>
             <label
               htmlFor="senha"
               className="block text-gray-700 font-medium mb-1"

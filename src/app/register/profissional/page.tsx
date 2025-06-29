@@ -1,21 +1,23 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { IMaskInput } from 'react-imask';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { IMaskInput } from "react-imask";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function ProfissionalPage() {
   const router = useRouter();
 
-  const [nome, setNome] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [email, setEmail] = useState('');
-  const [registro, setRegistro] = useState('');
-  const [area, setArea] = useState('');
+  const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [registro, setRegistro] = useState("");
+  const [area, setArea] = useState("");
+  const [especialidade, setEspecialidade] = useState("");
   const [dataNascimento, setDataNascimento] = useState<Date | null>(null);
-  const [senha, setSenha] = useState('');
+  const [senha, setSenha] = useState("");
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -25,7 +27,7 @@ export default function ProfissionalPage() {
     /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(senha);
 
   const validarCPF = (cpf: string): boolean => {
-    cpf = cpf.replace(/[^\d]+/g, '');
+    cpf = cpf.replace(/[^\d]+/g, "");
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
     let soma = 0;
     for (let i = 0; i < 9; i++) soma += Number(cpf[i]) * (10 - i);
@@ -48,10 +50,24 @@ export default function ProfissionalPage() {
     return dataLimpa.getTime() !== hoje.getTime();
   };
 
+  const getSenhaRequisitos = (senha: string) => {
+    const requisitos: string[] = [];
+    if (senha.length < 8) requisitos.push("mínimo 8 caracteres");
+    if (!/[A-Z]/.test(senha)) requisitos.push("1 letra maiúscula");
+    if (!/[a-z]/.test(senha)) requisitos.push("1 letra minúscula");
+    if (!/[0-9]/.test(senha)) requisitos.push("1 número");
+    if (!/[!@#$%^&*()_+\-=[\]{};':\"\\|,.<>/?]/.test(senha))
+      requisitos.push("1 símbolo(@, #, * , &)");
+    return requisitos;
+  };
+
+  // ✅ Adicionado aqui
+  const requisitosSenha = getSenhaRequisitos(senha);
+
   useEffect(() => {
     if (cpf.length === 14) {
       if (!validarCPF(cpf)) {
-        setErrors((prev) => ({ ...prev, cpf: 'CPF inválido.' }));
+        setErrors((prev) => ({ ...prev, cpf: "CPF inválido." }));
       } else {
         setErrors((prev) => {
           const { cpf, ...rest } = prev;
@@ -61,25 +77,25 @@ export default function ProfissionalPage() {
     }
   }, [cpf]);
 
-  const handleCadastro = (e: React.FormEvent) => {
+  const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
     if (!validateEmail(email)) {
-      newErrors.email = 'Email inválido. Ex: usuario@dominio.com';
+      newErrors.email = "Email inválido. Ex: usuario@dominio.com";
     }
 
     if (!validateSenha(senha)) {
       newErrors.senha =
-        'Senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 número e 1 símbolo.';
+        "Senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 número e 1 símbolo.";
     }
 
     if (!validateDataNascimento(dataNascimento)) {
-      newErrors.dataNascimento = 'Data de nascimento não pode ser hoje.';
+      newErrors.dataNascimento = "Data de nascimento não pode ser hoje.";
     }
 
     if (!validarCPF(cpf)) {
-      newErrors.cpf = 'CPF inválido.';
+      newErrors.cpf = "CPF inválido.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -87,19 +103,43 @@ export default function ProfissionalPage() {
       return;
     }
 
-    setErrors({});
-    console.log({
+    const payload = {
       nome,
       cpf,
       email,
+      telefone,
       registro,
       area,
-      dataNascimento,
+      especialidade,
       senha,
-    });
+      dataNascimento: dataNascimento?.toISOString().split("T")[0],
+    };
+    console.log(payload, "Estou aqui");
+    try {
+      const response = await fetch("http://localhost:8080/api/profissional", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Erro ao cadastrar:", errorData);
+        alert("Erro ao cadastrar profissional. Verifique os dados.");
+        return;
+      }
+
+      alert("Cadastro realizado com sucesso!");
+      router.push("/login");
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+      alert("Erro na comunicação com o servidor.");
+    }
   };
 
-  const handleRedirect = (type: 'paciente' | 'profissional') => {
+  const handleRedirect = (type: "paciente" | "profissional") => {
     router.push(`/register/${type}`);
   };
 
@@ -115,7 +155,10 @@ export default function ProfissionalPage() {
           onSubmit={handleCadastro}
         >
           <div>
-            <label htmlFor="nome" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="nome"
+              className="block text-gray-700 font-medium mb-1"
+            >
               Nome
             </label>
             <input
@@ -129,7 +172,10 @@ export default function ProfissionalPage() {
           </div>
 
           <div>
-            <label htmlFor="cpf" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="cpf"
+              className="block text-gray-700 font-medium mb-1"
+            >
               CPF
             </label>
             <IMaskInput
@@ -137,15 +183,22 @@ export default function ProfissionalPage() {
               value={cpf}
               onAccept={(value: string) => setCpf(value)}
               className={`w-full border rounded px-3 py-2 text-black focus:outline-none focus:ring-2 ${
-                errors.cpf ? 'border-red-500 focus:ring-red-500' : 'border-black focus:ring-blue-500'
+                errors.cpf
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-black focus:ring-blue-500"
               }`}
               required
             />
-            {errors.cpf && <p className="text-red-600 text-sm mt-1">{errors.cpf}</p>}
+            {errors.cpf && (
+              <p className="text-red-600 text-sm mt-1">{errors.cpf}</p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="dataNascimento" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="dataNascimento"
+              className="block text-gray-700 font-medium mb-1"
+            >
               Data de Nascimento
             </label>
             <DatePicker
@@ -164,17 +217,24 @@ export default function ProfissionalPage() {
               dropdownMode="select"
               placeholderText="Selecione a data"
               className={`w-full border rounded px-3 py-2 focus:outline-none text-black focus:ring-2 ${
-                errors.dataNascimento ? 'border-red-500 focus:ring-red-500' : 'border-black focus:ring-blue-500'
+                errors.dataNascimento
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-black focus:ring-blue-500"
               }`}
               required
             />
             {errors.dataNascimento && (
-              <p className="text-red-600 text-sm mt-1">{errors.dataNascimento}</p>
+              <p className="text-red-600 text-sm mt-1">
+                {errors.dataNascimento}
+              </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="email"
+              className="block text-gray-700 font-medium mb-1"
+            >
               Email
             </label>
             <input
@@ -183,15 +243,39 @@ export default function ProfissionalPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`w-full border rounded px-3 py-2 focus:outline-none text-black focus:ring-2 ${
-                errors.email ? 'border-red-500 focus:ring-red-500' : 'border-black focus:ring-blue-500'
+                errors.email
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-black focus:ring-blue-500"
               }`}
               required
             />
-            {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+            {errors.email && (
+              <p className="text-red-600 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="registro" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="telefone"
+              className="block text-gray-700 font-medium mb-1"
+            >
+              Telefone
+            </label>
+            <input
+              id="telefone"
+              type="text"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              className="w-full border text-black border-black rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="registro"
+              className="block text-gray-700 font-medium mb-1"
+            >
               Registro Médico
             </label>
             <input
@@ -205,8 +289,11 @@ export default function ProfissionalPage() {
           </div>
 
           <div>
-            <label htmlFor="area" className="block text-gray-700 font-medium mb-1">
-              Área de Atuação
+            <label
+              htmlFor="area"
+              className="block text-gray-700 font-medium mb-1"
+            >
+              Área
             </label>
             <input
               id="area"
@@ -219,7 +306,27 @@ export default function ProfissionalPage() {
           </div>
 
           <div>
-            <label htmlFor="senha" className="block text-gray-700 font-medium mb-1">
+            <label
+              htmlFor="area"
+              className="block text-gray-700 font-medium mb-1"
+            >
+              Especialidade
+            </label>
+            <input
+              id="especialidade"
+              type="text"
+              value={especialidade}
+              onChange={(e) => setEspecialidade(e.target.value)}
+              className="w-full border text-black border-black rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+            <div>
+            <label
+              htmlFor="senha"
+              className="block text-gray-700 font-medium mb-1"
+            >
               Senha
             </label>
             <input
@@ -228,11 +335,22 @@ export default function ProfissionalPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               className={`w-full border rounded px-3 py-2 focus:outline-none text-black focus:ring-2 ${
-                errors.senha ? 'border-red-500 focus:ring-red-500' : 'border-black focus:ring-blue-500'
+                errors.senha
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-black focus:ring-blue-500"
               }`}
               required
             />
-            {errors.senha && <p className="text-red-600 text-sm mt-1">{errors.senha}</p>}
+            {errors.senha && (
+              <p className="text-red-600 text-sm mt-1">{errors.senha}</p>
+            )}
+            {senha && requisitosSenha.length > 0 && (
+              <ul className="text-sm text-orange-600 mt-2 list-disc list-inside">
+                {requisitosSenha.map((item, idx) => (
+                  <li key={idx}>Falta: {item}</li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <button
@@ -245,13 +363,13 @@ export default function ProfissionalPage() {
 
         <div className="mt-6 flex flex-col gap-2">
           <button
-            onClick={() => handleRedirect('paciente')}
+            onClick={() => handleRedirect("paciente")}
             className="bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
           >
             Ir para cadastro de Paciente
           </button>
           <button
-            onClick={() => router.push('/login')}
+            onClick={() => router.push("/login")}
             className="bg-gray-500 text-white py-2 rounded hover:bg-gray-600 transition"
           >
             Voltar para Login

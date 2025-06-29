@@ -21,7 +21,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-blue-200 p-6">
       <div className="bg-gray-600 p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-white">PsicoManager</h1>
+        <h1 className="text-2xl font-bold text-center mb-6 text-white">PsychoMentor</h1>
 
         <form className="flex flex-col gap-4 bg-white p-4 rounded" onSubmit={handleLogin}>
           <div>
